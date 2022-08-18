@@ -48,7 +48,7 @@ static lock                                                                     
 static tcp_forward_host_map                                                     tcp_forward_host_map_;
 
 int
-libnet_get_cpu_platform(void) {
+libnet_get_cpu_platform(void) noexcept {
 #ifdef __i386__
     return 1;
 #elif __x86_64__
@@ -69,7 +69,7 @@ libnet_get_cpu_platform(void) {
 }
 
 const char*
-libnet_get_default_cipher_suites() {
+libnet_get_default_cipher_suites() noexcept {
     int cpu_platfrom = libnet_get_cpu_platform();
     if (cpu_platfrom == 3) {
         return "TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384";
@@ -78,17 +78,17 @@ libnet_get_default_cipher_suites() {
 }
 
 void
-libnet_process_max_priority(void) {
+libnet_process_max_priority(void) noexcept {
     io_host::process_max_priority();
 }
 
 void 
-libnet_thread_max_priority(void) {
+libnet_thread_max_priority(void) noexcept {
     io_host::thread_max_priority();
 }
 
 static std::shared_ptr<io_host>
-libnet_get_io_host(void* handle_) {
+libnet_get_io_host(void* handle_) noexcept {
     lock_scope scope_(io_host_lock_);
     io_host_map::iterator tail_ = io_host_map_.find((io_host*)handle_);
     io_host_map::iterator endl_ = io_host_map_.end();
@@ -99,7 +99,7 @@ libnet_get_io_host(void* handle_) {
 }
 
 bool 
-libnet_io_protect(void* io_host_, libnet_io_protect_fn protect) {
+libnet_io_protect(void* io_host_, libnet_io_protect_fn protect) noexcept {
     std::shared_ptr<io_host> host_ = libnet_get_io_host(io_host_);
     if (!host_) {
         return false;
@@ -109,7 +109,7 @@ libnet_io_protect(void* io_host_, libnet_io_protect_fn protect) {
 }
 
 void*
-libnet_new_io_host(int concurrent_) {
+libnet_new_io_host(int concurrent_) noexcept {
     std::shared_ptr<io_host> host_;
     do {
         lock_scope scope_(io_host_lock_);
@@ -126,7 +126,7 @@ libnet_new_io_host(int concurrent_) {
 }
 
 bool
-libnet_release_io_host(void* handle_) {
+libnet_release_io_host(void* handle_) noexcept {
     std::shared_ptr<io_host> host_;
     do {
         lock_scope scope_(io_host_lock_);
@@ -142,12 +142,12 @@ libnet_release_io_host(void* handle_) {
     if (!host_) {
         return false;
     }
-    host_->abort();
+    host_->close();
     return true;
 }
 
 void*
-libnet_new_tls_c_host(void* io_host_, TLS_CLIENT_LINK* tls_link_) {
+libnet_new_tls_c_host(void* io_host_, TLS_CLIENT_LINK* tls_link_) noexcept {
     std::shared_ptr<io_host> host_ = libnet_get_io_host(io_host_);
     if (!host_ || !tls_link_) {
         return NULL;
@@ -185,7 +185,7 @@ libnet_new_tls_c_host(void* io_host_, TLS_CLIENT_LINK* tls_link_) {
 }
 
 bool
-libnet_release_tls_c_host(void* handle_) {
+libnet_release_tls_c_host(void* handle_) noexcept {
     std::shared_ptr<tls_client_host> host_;
     do {
         lock_scope scope_(tls_client_host_lock_);
@@ -201,12 +201,12 @@ libnet_release_tls_c_host(void* handle_) {
     if (!host_) {
         return false;
     }
-    host_->abort();
+    host_->close();
     return true;
 }
 
 void*
-libnet_new_ws_s_host(void* io_host_, WS_LINK* ws_link_) {
+libnet_new_ws_s_host(void* io_host_, WS_LINK* ws_link_) noexcept {
     std::shared_ptr<io_host> host_ = libnet_get_io_host(io_host_);
     if (!host_ || !ws_link_) {
         return NULL;
@@ -244,7 +244,7 @@ libnet_new_ws_s_host(void* io_host_, WS_LINK* ws_link_) {
 }
 
 bool
-libnet_release_ws_s_host(void* handle_) {
+libnet_release_ws_s_host(void* handle_) noexcept {
     std::shared_ptr<ws_host> host_;
     do {
         lock_scope scope_(ws_host_lock_);
@@ -260,12 +260,12 @@ libnet_release_ws_s_host(void* handle_) {
     if (!host_) {
         return false;
     }
-    host_->abort();
+    host_->close();
     return true;
 }
 
 void*
-libnet_new_ws_c_host(void* io_host_, WS_CLIENT_LINK* ws_link_) {
+libnet_new_ws_c_host(void* io_host_, WS_CLIENT_LINK* ws_link_) noexcept {
     std::shared_ptr<io_host> host_ = libnet_get_io_host(io_host_);
     if (!host_ || !ws_link_) {
         return NULL;
@@ -306,7 +306,7 @@ libnet_new_ws_c_host(void* io_host_, WS_CLIENT_LINK* ws_link_) {
 }
 
 bool
-libnet_release_ws_c_host(void* handle_) {
+libnet_release_ws_c_host(void* handle_) noexcept {
     std::shared_ptr<ws_client_host> host_;
     do {
         lock_scope scope_(ws_client_host_lock_);
@@ -322,12 +322,12 @@ libnet_release_ws_c_host(void* handle_) {
     if (!host_) {
         return false;
     }
-    host_->abort();
+    host_->close();
     return true;
 }
 
 void*
-libnet_new_wss_c_host(void* io_host_, WSS_CLIENT_LINK* wss_link_) {
+libnet_new_wss_c_host(void* io_host_, WSS_CLIENT_LINK* wss_link_) noexcept {
     std::shared_ptr<io_host> host_ = libnet_get_io_host(io_host_);
     if (!host_ || !wss_link_) {
         return NULL;
@@ -372,7 +372,7 @@ libnet_new_wss_c_host(void* io_host_, WSS_CLIENT_LINK* wss_link_) {
 }
 
 bool
-libnet_release_wss_c_host(void* handle_) {
+libnet_release_wss_c_host(void* handle_) noexcept {
     std::shared_ptr<wss_client_host> host_;
     do {
         lock_scope scope_(wss_client_host_lock_);
@@ -388,12 +388,12 @@ libnet_release_wss_c_host(void* handle_) {
     if (!host_) {
         return false;
     }
-    host_->abort();
+    host_->close();
     return true;
 }
 
 void*
-libnet_new_wss_s_host(void* io_host_, WSS_LINK* wss_link_) {
+libnet_new_wss_s_host(void* io_host_, WSS_LINK* wss_link_) noexcept {
     std::shared_ptr<io_host> host_ = libnet_get_io_host(io_host_);
     if (!host_ || !wss_link_) {
         return NULL;
@@ -450,7 +450,7 @@ libnet_new_wss_s_host(void* io_host_, WSS_LINK* wss_link_) {
 }
 
 bool
-libnet_release_wss_s_host(void* handle_) {
+libnet_release_wss_s_host(void* handle_) noexcept {
     std::shared_ptr<wss_host> host_;
     do {
         lock_scope scope_(wss_host_lock_);
@@ -466,12 +466,12 @@ libnet_release_wss_s_host(void* handle_) {
     if (!host_) {
         return false;
     }
-    host_->abort();
+    host_->close();
     return true;
 }
 
 void*
-libnet_new_tcp_forward_host(void* io_host_, TCP_FORWARD_LINK* link__) {
+libnet_new_tcp_forward_host(void* io_host_, TCP_FORWARD_LINK* link__) noexcept {
     std::shared_ptr<io_host> host_ = libnet_get_io_host(io_host_);
     if (!host_ || !link__) {
         return NULL;
@@ -502,7 +502,7 @@ libnet_new_tcp_forward_host(void* io_host_, TCP_FORWARD_LINK* link__) {
 }
 
 bool
-libnet_release_tcp_forward_host(void* handle_) {
+libnet_release_tcp_forward_host(void* handle_) noexcept {
     std::shared_ptr<tcp_forward_host> host_;
     do {
         lock_scope scope_(tcp_forward_host_lock_);
@@ -518,6 +518,6 @@ libnet_release_tcp_forward_host(void* handle_) {
     if (!host_) {
         return false;
     }
-    host_->abort();
+    host_->close();
     return true;
 }

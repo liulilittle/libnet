@@ -9,15 +9,15 @@ class wss_client_host : public std::enable_shared_from_this<wss_client_host> {
     friend class wss_client_tunnel;
 
 public:
-    wss_client_host(const std::shared_ptr<io_host>& host, const wss_client_link& link);
-    ~wss_client_host();
+    wss_client_host(const std::shared_ptr<io_host>& host, const wss_client_link& link) noexcept;
+    ~wss_client_host() noexcept;
 
 public:
-    bool                            run();
-    void                            abort();
+    bool                            run() noexcept;
+    void                            close() noexcept;
 
 private:
-    bool                            accept_socket();
+    bool                            accept_socket() noexcept;
 
 private:
     std::shared_ptr<io_host>        host_;

@@ -3,7 +3,7 @@
 #include <tcp_forward_host.h>
 #include <tcp_forward_tunnel.h>
 
-tcp_forward_host::tcp_forward_host(const std::shared_ptr<io_host>& host, const tcp_forward_link& link)
+tcp_forward_host::tcp_forward_host(const std::shared_ptr<io_host>& host, const tcp_forward_link& link) noexcept
     : enable_shared_from_this()
     , host_(host)
     , link_(link)
@@ -11,11 +11,11 @@ tcp_forward_host::tcp_forward_host(const std::shared_ptr<io_host>& host, const t
 
 }
 
-tcp_forward_host::~tcp_forward_host() {
-    abort();
+tcp_forward_host::~tcp_forward_host() noexcept {
+    close();
 }
 
-bool tcp_forward_host::run() {
+bool tcp_forward_host::run() noexcept {
     try {
         if (tls_client_host::open_socket(server_, link_.local_host)) {
             return false;
@@ -44,7 +44,7 @@ bool tcp_forward_host::run() {
     }
 }
 
-void tcp_forward_host::abort() {
+void tcp_forward_host::close() noexcept {
     if (server_.is_open()) {
         boost::system::error_code ec;
         try {
@@ -54,21 +54,21 @@ void tcp_forward_host::abort() {
     }
 }
 
-bool tcp_forward_host::accept_socket() {
+bool tcp_forward_host::accept_socket() noexcept {
     if (!server_.is_open()) {
         return false;
     }
     std::shared_ptr<boost::asio::io_context> context = host_->get();
     std::shared_ptr<boost::asio::ip::tcp::socket> socket = make_shared_object<boost::asio::ip::tcp::socket>(*context);
     std::shared_ptr<tcp_forward_host> self = shared_from_this();
-    server_.async_accept(*socket.get(), [self, this, socket, context](boost::system::error_code ec) {
+    server_.async_accept(*socket.get(), [self, this, socket, context](boost::system::error_code ec) noexcept {
         if (ec) {
             tls_client_host::close_socket(*socket.get());
         }
         else {
             std::shared_ptr<tcp_forward_tunnel> connection_ = make_shared_object<tcp_forward_tunnel>(self, context, socket);
             if (!connection_->run()) {
-                connection_->abort();
+                connection_->close();
             }
         }
         accept_socket();

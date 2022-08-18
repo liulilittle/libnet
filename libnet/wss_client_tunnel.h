@@ -15,17 +15,17 @@ public:
         const std::shared_ptr<wss_client_host>&                 host,
         const std::shared_ptr<boost::asio::io_context>&         context,
         const std::shared_ptr<boost::asio::ip::tcp::socket>&    socket);
-    ~wss_client_tunnel();
+    ~wss_client_tunnel() noexcept;
 
 public:
-    bool                                                        run();
-    void                                                        abort();
+    bool                                                        run() noexcept;
+    void                                                        close() noexcept;
 
 private:
-    void                                                        finalize();
-    bool                                                        local_to_remote();
-    bool                                                        remote_to_local();
-    inline bool                                                 socket_is_open() {
+    void                                                        finalize() noexcept;
+    bool                                                        local_to_remote() noexcept;
+    bool                                                        remote_to_local() noexcept;
+    inline bool                                                 socket_is_open() noexcept {
         if (fin_.load()) {
             return false;
         }

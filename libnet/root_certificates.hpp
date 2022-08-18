@@ -44,7 +44,7 @@ namespace detail {
 
     inline
         void
-        load_root_certificates(ssl::context& ctx, boost::system::error_code& ec)
+        load_root_certificates(ssl::context& ctx, boost::system::error_code& ec) noexcept
     {
         std::string cert =
             "# ACCVRAIZ1\n"
@@ -3945,7 +3945,7 @@ namespace detail {
 
 inline
 void
-load_root_certificates(ssl::context& ctx, boost::system::error_code& ec)
+load_root_certificates(ssl::context& ctx, boost::system::error_code& ec) noexcept
 {
     detail::load_root_certificates(ctx, ec);
 }

@@ -12,18 +12,18 @@ class ws_client_tunnel : public std::enable_shared_from_this<ws_client_tunnel> {
 public:
     ws_client_tunnel(const std::shared_ptr<ws_client_host>& host,
         const std::shared_ptr<boost::asio::io_context>& context,
-        const std::shared_ptr<boost::asio::ip::tcp::socket>& socket);
-    ~ws_client_tunnel();
+        const std::shared_ptr<boost::asio::ip::tcp::socket>& socket) noexcept;
+    ~ws_client_tunnel() noexcept;
 
 public:
-    bool                                                        run();
-    void                                                        abort();
+    bool                                                        run() noexcept;
+    void                                                        close() noexcept;
 
 private:
-    void                                                        finalize();
-    bool                                                        local_to_remote();
-    bool                                                        remote_to_local();
-    inline bool                                                 socket_is_open() {
+    void                                                        finalize() noexcept;
+    bool                                                        local_to_remote() noexcept;
+    bool                                                        remote_to_local() noexcept;
+    inline bool                                                 socket_is_open() noexcept {
         if (fin_.load()) {
             return false;
         }

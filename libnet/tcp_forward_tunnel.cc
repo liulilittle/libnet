@@ -3,7 +3,7 @@
 #include <tcp_forward_host.h>
 #include <tcp_forward_tunnel.h>
 
-bool tcp_forward_tunnel::run() {
+bool tcp_forward_tunnel::run() noexcept {
     std::shared_ptr<tcp_forward_tunnel> self = shared_from_this();
     try {
         // Make the connection on the IP address we get from a lookup.
@@ -40,9 +40,9 @@ bool tcp_forward_tunnel::run() {
         }
 
         remote_socket_.async_connect(io_host::endpoint(link_.remote_host, link_.remote_port),
-            [self, this](const boost::system::error_code& ec) {
+            [self, this](const boost::system::error_code& ec) noexcept {
                 if (ec) {
-                    abort();
+                    close();
                     return;
                 }
 
@@ -56,25 +56,25 @@ bool tcp_forward_tunnel::run() {
     }
 }
 
-void tcp_forward_tunnel::abort() {
+void tcp_forward_tunnel::close() noexcept {
     if (!fin_.exchange(true)) {
         finalize();
     }
 }
 
-void tcp_forward_tunnel::finalize() {
+void tcp_forward_tunnel::finalize() noexcept {
     tls_client_host::close_socket(remote_socket_);
     tls_client_host::close_socket(*local_socket_.get());
 }
 
-tcp_forward_tunnel::~tcp_forward_tunnel() {
+tcp_forward_tunnel::~tcp_forward_tunnel() noexcept {
     finalize();
 }
 
 tcp_forward_tunnel::tcp_forward_tunnel(
-    const std::shared_ptr<tcp_forward_host>&          host,
+    const std::shared_ptr<tcp_forward_host>&                host,
     const std::shared_ptr<boost::asio::io_context>&         context,
-    const std::shared_ptr<boost::asio::ip::tcp::socket>&    socket)
+    const std::shared_ptr<boost::asio::ip::tcp::socket>&    socket) noexcept
     : enable_shared_from_this()
     , fin_(false)
     , context_(context)
@@ -92,24 +92,24 @@ tcp_forward_tunnel::tcp_forward_tunnel(
     }
 }
 
-bool tcp_forward_tunnel::remote_to_local() {
+bool tcp_forward_tunnel::remote_to_local() noexcept {
     if (!socket_is_open()) {
         return false;
     }
 
     std::shared_ptr<tcp_forward_tunnel> self = shared_from_this();
     remote_socket_.async_read_some(boost::asio::buffer(remote_socket_buf_, TCP_BUFFER_SIZE),
-        [self, this](const boost::system::error_code& ec, uint32_t sz) {
+        [self, this](const boost::system::error_code& ec, uint32_t sz) noexcept {
             int by = std::max<int>(-1, ec ? -1 : sz);
             if (by <= 0) {
-                abort();
+                close();
                 return;
             }
 
             boost::asio::async_write(*local_socket_.get(), boost::asio::buffer(remote_socket_buf_, by),
-                [self, this](const boost::system::error_code& ec, uint32_t sz) {
+                [self, this](const boost::system::error_code& ec, uint32_t sz) noexcept {
                     if (ec) {
-                        abort();
+                        close();
                         return;
                     }
                     remote_to_local();
@@ -118,24 +118,24 @@ bool tcp_forward_tunnel::remote_to_local() {
     return true;
 }
 
-bool tcp_forward_tunnel::local_to_remote() {
+bool tcp_forward_tunnel::local_to_remote() noexcept {
     if (!socket_is_open()) {
         return false;
     }
 
     std::shared_ptr<tcp_forward_tunnel> self = shared_from_this();
     local_socket_->async_read_some(boost::asio::buffer(local_socket_buf_, TCP_BUFFER_SIZE),
-        [self, this](const boost::system::error_code& ec, uint32_t sz) {
+        [self, this](const boost::system::error_code& ec, uint32_t sz) noexcept {
             int by = std::max<int>(-1, ec ? -1 : sz);
             if (by <= 0) {
-                abort();
+                close();
                 return;
             }
 
             boost::asio::async_write(remote_socket_, boost::asio::buffer(local_socket_buf_, by),
-                [self, this](const boost::system::error_code& ec, uint32_t sz) {
+                [self, this](const boost::system::error_code& ec, uint32_t sz) noexcept {
                     if (ec) {
-                        abort();
+                        close();
                         return;
                     }
                     local_to_remote();

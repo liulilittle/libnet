@@ -4,11 +4,11 @@
 #include <stdafx.h>
 #include <io_host.h>
 
-io_host::~io_host() {
-    abort();
+io_host::~io_host() noexcept  {
+    close();
 }
 
-io_host::io_host(int concurrent)
+io_host::io_host(int concurrent) noexcept
     : enable_shared_from_this()
     , protect_(NULL)
     , fin_({ false }) {
@@ -18,7 +18,7 @@ io_host::io_host(int concurrent)
     concurrent_ = concurrent;
 }
 
-void io_host::run() {
+void io_host::run() noexcept {
     lock_scope scope_(lock_);
     if (!fin_) {
         if (!def_) {
@@ -39,7 +39,7 @@ void io_host::run() {
     }
 }
 
-std::shared_ptr<boost::asio::io_context> io_host::newc() {
+std::shared_ptr<boost::asio::io_context> io_host::newc() noexcept {
     std::shared_ptr<io_host> self = shared_from_this();
     std::shared_ptr<boost::asio::io_context> context_ = make_shared_object<boost::asio::io_context>();
     std::thread([self, this, context_] {
@@ -52,11 +52,11 @@ std::shared_ptr<boost::asio::io_context> io_host::newc() {
     return std::move(context_);
 }
 
-std::shared_ptr<boost::asio::io_context> io_host::def() {
+std::shared_ptr<boost::asio::io_context> io_host::def() noexcept {
     return def_;
 }
 
-std::shared_ptr<boost::asio::io_context> io_host::get() {
+std::shared_ptr<boost::asio::io_context> io_host::get() noexcept  {
     lock_scope scope_(lock_);
     context_list::iterator tail_ = list_.begin();
     context_list::iterator endl_ = list_.end();
@@ -78,7 +78,7 @@ bool io_host::protect(
     const boost::asio::ip::tcp::endpoint&           nat,
     const boost::asio::ip::tcp::endpoint&           src,
     const __in_addr__&                              dstAddr,
-    int                                             dstPort) {
+    int                                             dstPort) noexcept {
     protect_io_event event_ = protect_;
     if (!event_) {
         return true;
@@ -105,14 +105,14 @@ bool io_host::protect(
     int                                             sockfd,
     const boost::asio::ip::tcp::endpoint&           nat,
     const boost::asio::ip::tcp::endpoint&           src,
-    const boost::asio::ip::tcp::endpoint&           dst) {
+    const boost::asio::ip::tcp::endpoint&           dst) noexcept {
 
     __in_addr__ host_;
     fill(host_, dst);
     return protect(sockfd, nat, src, host_, dst.port());
 }
 
-void io_host::abort() {
+void io_host::close() noexcept {
     std::vector<context_ptr> releases_;
     if (!fin_.exchange(true)) {
         lock_scope scope_(lock_);
@@ -131,7 +131,7 @@ void io_host::abort() {
     }
 }
 
-void io_host::thread_max_priority() {
+void io_host::thread_max_priority() noexcept {
 #ifdef _WIN32
     SetThreadPriority(GetCurrentProcess(), THREAD_PRIORITY_LOWEST);
 #else
@@ -147,7 +147,7 @@ void io_host::thread_max_priority() {
 #endif
 }
 
-void io_host::process_max_priority() {
+void io_host::process_max_priority() noexcept {
 #ifdef _WIN32
     SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
 #else

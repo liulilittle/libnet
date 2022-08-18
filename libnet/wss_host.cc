@@ -3,7 +3,7 @@
 #include <wss_host.h>
 #include <wss_tunnel.h>
 
-wss_host::wss_host(const std::shared_ptr<io_host>& host, const wss_link& link)
+wss_host::wss_host(const std::shared_ptr<io_host>& host, const wss_link& link) noexcept
     : enable_shared_from_this()
     , host_(host)
     , link_(link)
@@ -17,7 +17,7 @@ wss_host::wss_host(const std::shared_ptr<io_host>& host, const wss_link& link)
     // This function is used to specify a callback function to obtain password information about an encrypted key in PEM format.
     ssl_.set_password_callback([link](
         std::size_t max_length, // The maximum size for a password.
-        boost::asio::ssl::context_base::password_purpose purpose) -> std::string { // Whether password is for reading or writing.
+        boost::asio::ssl::context_base::password_purpose purpose) noexcept -> std::string { // Whether password is for reading or writing.
         return link.ssl_verity_pass;
     }, ec);
 
@@ -37,11 +37,11 @@ wss_host::wss_host(const std::shared_ptr<io_host>& host, const wss_link& link)
     SSL_CTX_set_ecdh_auto(ssl_.native_handle(), 1);
 }
 
-wss_host::~wss_host() {
-    abort();
+wss_host::~wss_host() noexcept {
+    close();
 }
 
-int wss_host::ssl_method(int method) {
+int wss_host::ssl_method(int method) noexcept {
     switch (method) {
     case tls_client_link::tlsv13:
         return boost::asio::ssl::context::tlsv13_server;
@@ -62,7 +62,7 @@ int wss_host::ssl_method(int method) {
     };
 }
 
-bool wss_host::run() {
+bool wss_host::run() noexcept {
     try {
         if (tls_client_host::open_socket(server_, link_.local_host)) {
             return false;
@@ -91,7 +91,7 @@ bool wss_host::run() {
     }
 }
 
-void wss_host::abort() {
+void wss_host::close() noexcept {
     if (server_.is_open()) {
         boost::system::error_code ec;
         try {
@@ -101,21 +101,21 @@ void wss_host::abort() {
     }
 }
 
-bool wss_host::accept_socket() {
+bool wss_host::accept_socket() noexcept {
     if (!server_.is_open()) {
         return false;
     }
     std::shared_ptr<boost::asio::io_context> context = host_->get();
     std::shared_ptr<boost::asio::ip::tcp::socket> socket = make_shared_object<boost::asio::ip::tcp::socket>(*context);
     std::shared_ptr<wss_host> self = shared_from_this();
-    server_.async_accept(*socket.get(), [self, this, socket, context](boost::system::error_code ec) {
+    server_.async_accept(*socket.get(), [self, this, socket, context](boost::system::error_code ec) noexcept {
         if (ec) {
             tls_client_host::close_socket(*socket.get());
         }
         else {
             std::shared_ptr<wss_tunnel> connection_ = make_shared_object<wss_tunnel>(self, context, socket);
             if (!connection_->run()) {
-                connection_->abort();
+                connection_->close();
             }
         }
         accept_socket();

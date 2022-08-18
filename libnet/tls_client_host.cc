@@ -3,21 +3,21 @@
 #include <tls_client_host.h>
 #include <tls_client_tunnel.h>
 
-bool tls_client_host::accept_socket() {
+bool tls_client_host::accept_socket() noexcept {
     if (!server_.is_open()) {
         return false;
     }
     std::shared_ptr< boost::asio::io_context> context = host_->get();
     std::shared_ptr<boost::asio::ip::tcp::socket> socket = make_shared_object<boost::asio::ip::tcp::socket>(*context);
     std::shared_ptr<tls_client_host> self = shared_from_this();
-    server_.async_accept(*socket.get(), [self, this, socket, context](boost::system::error_code ec) {
+    server_.async_accept(*socket.get(), [self, this, socket, context](boost::system::error_code ec) noexcept {
         if (ec) {
             close_socket(*socket.get());
         }
         else {
             std::shared_ptr<tls_client_tunnel> connection_ = make_shared_object<tls_client_tunnel>(self, context, socket);
             if (!connection_->run()) {
-                connection_->abort();
+                connection_->close();
             }
         }
         accept_socket();
@@ -25,7 +25,7 @@ bool tls_client_host::accept_socket() {
     return true;
 }
 
-void tls_client_host::close_socket(boost::asio::ip::tcp::socket& s) {
+void tls_client_host::close_socket(boost::asio::ip::tcp::socket& s) noexcept {
     if (s.is_open()) {
         boost::system::error_code ec;
         try {
@@ -39,7 +39,7 @@ void tls_client_host::close_socket(boost::asio::ip::tcp::socket& s) {
     }
 }
 
-void tls_client_host::setsockopt(int sockfd, bool v4_or_v6) {
+void tls_client_host::setsockopt(int sockfd, bool v4_or_v6) noexcept {
     if (sockfd != -1) {
         uint8_t tos = 0x68;
         if (v4_or_v6) {
@@ -71,7 +71,7 @@ void tls_client_host::setsockopt(int sockfd, bool v4_or_v6) {
     }
 }
 
-bool tls_client_host::run() {
+bool tls_client_host::run() noexcept {
     try {
         if (tls_client_host::open_socket(server_, link_.local_host)) {
             return false;
@@ -100,7 +100,7 @@ bool tls_client_host::run() {
     }
 }
 
-int tls_client_host::ssl_method(int method) {
+int tls_client_host::ssl_method(int method) noexcept {
     switch (method) {
     case tls_client_link::tlsv13:
         return boost::asio::ssl::context::tlsv13_client;
@@ -121,7 +121,7 @@ int tls_client_host::ssl_method(int method) {
     };
 }
 
-tls_client_host::tls_client_host(const std::shared_ptr<io_host>& host, const tls_client_link& link)
+tls_client_host::tls_client_host(const std::shared_ptr<io_host>& host, const tls_client_link& link) noexcept
     : enable_shared_from_this()
     , host_(host)
     , link_(link)
@@ -147,11 +147,11 @@ tls_client_host::tls_client_host(const std::shared_ptr<io_host>& host, const tls
     SSL_CTX_set_ecdh_auto(ssl_.native_handle(), 1);
 }
 
-tls_client_host::~tls_client_host() {
-    abort();
+tls_client_host::~tls_client_host() noexcept {
+    close();
 }
 
-void tls_client_host::abort() {
+void tls_client_host::close() noexcept {
     if (server_.is_open()) {
         boost::system::error_code ec;
         try {

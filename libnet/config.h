@@ -4,7 +4,7 @@
 #include <limits.h>
 
 static const int   TCP_BUFFER_SIZE      = 65536;
-static const int   TCP_LISTEN_BACKLOG   = 32767; // 511 is nginx
+static const int   TCP_LISTEN_BACKLOG   = 511; // 511 is nginx
 
 typedef struct {
     typedef enum {

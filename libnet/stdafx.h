@@ -36,7 +36,7 @@
 #define PATH_MAX 4096/*MAX_PATH*/
 #endif
 
-inline int                                                      Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters) {
+inline int                                                      Tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters) noexcept {
     if (str.empty()) {
         return 0;
     }
@@ -84,7 +84,7 @@ inline int                                                      Tokenize(const s
     }
     return length;
 }
-inline std::string                                              LTrim(const std::string& s) {
+inline std::string                                              LTrim(const std::string& s) noexcept {
     std::string str = s;
     if (str.empty()) {
         return str;
@@ -111,7 +111,7 @@ inline std::string                                              LTrim(const std:
     }
     return str;
 }
-inline std::string                                              RTrim(const std::string& s) {
+inline std::string                                              RTrim(const std::string& s) noexcept {
     std::string str = s;
     if (str.empty()) {
         return str;
@@ -140,21 +140,21 @@ inline std::string                                              RTrim(const std:
     }
     return str;
 }
-inline std::string                                              ToUpper(const std::string& s) {
+inline std::string                                              ToUpper(const std::string& s) noexcept {
     std::string r = s;
     if (!r.empty()) {
         std::transform(s.begin(), s.end(), r.begin(), toupper);
     }
     return r;
 }
-inline std::string                                              ToLower(const std::string& s) {
+inline std::string                                              ToLower(const std::string& s) noexcept {
     std::string r = s;
     if (!r.empty()) {
         std::transform(s.begin(), s.end(), r.begin(), tolower);
     }
     return r;
 }
-inline std::string                                              Replace(const std::string& s, const std::string& old_value, const std::string& new_value) {
+inline std::string                                              Replace(const std::string& s, const std::string& old_value, const std::string& new_value) noexcept {
     std::string r = s;
     if (r.empty()) {
         return r;
@@ -170,7 +170,7 @@ inline std::string                                              Replace(const st
     } while (1);
     return r;
 }
-inline int                                                      Split(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters) {
+inline int                                                      Split(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters) noexcept {
     if (str.empty()) {
         return 0;
     }
@@ -199,7 +199,7 @@ inline int                                                      Split(const std:
     }
     return curr_cnt;
 }
-inline uint64_t                                                 GetTickCount(bool microseconds) {
+inline uint64_t                                                 GetTickCount(bool microseconds) noexcept {
 #ifdef _WIN32
     static LARGE_INTEGER ticksPerSecond; // (unsigned long long)GetTickCount64();
     LARGE_INTEGER ticks;
@@ -232,7 +232,7 @@ inline uint64_t                                                 GetTickCount(boo
     return ((unsigned long long)tv.tv_usec / 1000) + ((unsigned long long)tv.tv_sec * 1000);
 #endif
 }
-inline std::string                                              PaddingLeft(const std::string& s, int count, char padding_char) {
+inline std::string                                              PaddingLeft(const std::string& s, int count, char padding_char) noexcept {
     char buf[1500]; 
     if (count <= 0 || count <= (int)s.size()) {
         return s;
@@ -250,7 +250,7 @@ inline std::string                                              PaddingLeft(cons
     }
     return r;
 }
-inline std::string                                              PaddingRight(const std::string& s, int count, char padding_char) {
+inline std::string                                              PaddingRight(const std::string& s, int count, char padding_char) noexcept {
     char buf[1500]; 
     if (count <= 0 || count <= (int)s.size()) {
         return s;
@@ -268,7 +268,7 @@ inline std::string                                              PaddingRight(con
     }
     return r;
 }
-inline std::string                                              GetCurrentTimeText() {
+inline std::string                                              GetCurrentTimeText() noexcept {
     time_t rawtime;
     struct tm* ptminfo;
 
@@ -310,7 +310,7 @@ inline std::string                                              GetCurrentTimeTe
         append(ss);
     return sb;
 }
-inline std::string                                              ToAddressString(uint32_t address, uint16_t port) {
+inline std::string                                              ToAddressString(uint32_t address, uint16_t port) noexcept {
     char sz[128]; 
     uint8_t* p = (uint8_t*)&address;
     sprintf(sz, "%d.%d.%d.%d:%d", p[0], p[1], p[2], p[3], port);
@@ -318,12 +318,12 @@ inline std::string                                              ToAddressString(
 }
 
 template<class TProtocol>
-inline std::string                                              ToAddressString(const boost::asio::ip::basic_endpoint<TProtocol>& ep) {
+inline std::string                                              ToAddressString(const boost::asio::ip::basic_endpoint<TProtocol>& ep) noexcept {
     return std::move(ep.address().to_string() + ":" + std::to_string(ep.port()));
 }
 
 template<typename T>
-inline std::shared_ptr<T>                                       make_shared_alloc(int length) {
+inline std::shared_ptr<T>                                       make_shared_alloc(int length) noexcept {
     static_assert(sizeof(T) > 0, "can't make pointer to incomplete type");
 
     // https://pkg.go.dev/github.com/google/agi/core/os/device
@@ -340,6 +340,6 @@ inline std::shared_ptr<T>                                       make_shared_allo
 }
 
 template<typename T, typename... A>
-inline std::shared_ptr<T>                                       make_shared_object(A&&... args) {
+inline std::shared_ptr<T>                                       make_shared_object(A&&... args) noexcept {
     return std::make_shared<T>(std::forward<A&&>(args)...);
 }

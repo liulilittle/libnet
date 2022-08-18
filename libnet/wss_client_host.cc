@@ -4,7 +4,7 @@
 #include <wss_client_host.h>
 #include <wss_client_tunnel.h>
 
-wss_client_host::wss_client_host(const std::shared_ptr<io_host>& host, const wss_client_link& link)
+wss_client_host::wss_client_host(const std::shared_ptr<io_host>& host, const wss_client_link& link) noexcept
     : enable_shared_from_this()
     , host_(host)
     , link_(link)
@@ -30,11 +30,11 @@ wss_client_host::wss_client_host(const std::shared_ptr<io_host>& host, const wss
     SSL_CTX_set_ecdh_auto(ssl_.native_handle(), 1);
 }
 
-wss_client_host::~wss_client_host() {
-    abort();
+wss_client_host::~wss_client_host() noexcept {
+    close();
 }
 
-bool wss_client_host::run() {
+bool wss_client_host::run() noexcept {
     try {
         if (tls_client_host::open_socket(server_, link_.tls_.local_host)) {
             return false;
@@ -63,7 +63,7 @@ bool wss_client_host::run() {
     }
 }
 
-void wss_client_host::abort() {
+void wss_client_host::close() noexcept {
     if (server_.is_open()) {
         boost::system::error_code ec;
         try {
@@ -73,21 +73,21 @@ void wss_client_host::abort() {
     }
 }
 
-bool wss_client_host::accept_socket() {
+bool wss_client_host::accept_socket() noexcept {
     if (!server_.is_open()) {
         return false;
     }
     std::shared_ptr<boost::asio::io_context> context = host_->get();
     std::shared_ptr<boost::asio::ip::tcp::socket> socket = make_shared_object<boost::asio::ip::tcp::socket>(*context);
     std::shared_ptr<wss_client_host> self = shared_from_this();
-    server_.async_accept(*socket.get(), [self, this, socket, context](boost::system::error_code ec) {
+    server_.async_accept(*socket.get(), [self, this, socket, context](boost::system::error_code ec) noexcept {
         if (ec) {
             tls_client_host::close_socket(*socket.get());
         }
         else {
             std::shared_ptr<wss_client_tunnel> connection_ = make_shared_object<wss_client_tunnel>(self, context, socket);
             if (!connection_->run()) {
-                connection_->abort();
+                connection_->close();
             }
         }
         accept_socket();

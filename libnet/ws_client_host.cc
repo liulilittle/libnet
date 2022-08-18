@@ -3,7 +3,7 @@
 #include <ws_client_host.h>
 #include <ws_client_tunnel.h>
 
-ws_client_host::ws_client_host(const std::shared_ptr<io_host>& host, const ws_client_link& link)
+ws_client_host::ws_client_host(const std::shared_ptr<io_host>& host, const ws_client_link& link) noexcept
     : enable_shared_from_this()
     , host_(host)
     , link_(link)
@@ -11,11 +11,11 @@ ws_client_host::ws_client_host(const std::shared_ptr<io_host>& host, const ws_cl
 
 }
 
-ws_client_host::~ws_client_host() {
-    abort();
+ws_client_host::~ws_client_host() noexcept {
+    close();
 }
 
-void ws_client_host::abort() {
+void ws_client_host::close() noexcept {
     if (server_.is_open()) {
         boost::system::error_code ec;
         try {
@@ -25,14 +25,14 @@ void ws_client_host::abort() {
     }
 }
 
-bool ws_client_host::accept_socket() {
+bool ws_client_host::accept_socket() noexcept {
     if (!server_.is_open()) {
         return false;
     }
     std::shared_ptr< boost::asio::io_context> context = host_->get();
     std::shared_ptr<boost::asio::ip::tcp::socket> socket = make_shared_object<boost::asio::ip::tcp::socket>(*context);
     std::shared_ptr<ws_client_host> self = shared_from_this();
-    server_.async_accept(*socket.get(), [self, this, socket, context](boost::system::error_code ec) {
+    server_.async_accept(*socket.get(), [self, this, socket, context](boost::system::error_code ec) noexcept {
         if (ec) {
             tls_client_host::close_socket(*socket.get());
         }
@@ -47,7 +47,7 @@ bool ws_client_host::accept_socket() {
 
             std::shared_ptr<ws_client_tunnel> connection_ = make_shared_object<ws_client_tunnel>(self, context, socket);
             if (!connection_->run()) {
-                connection_->abort();
+                connection_->close();
             }
         }
         accept_socket();
@@ -55,7 +55,7 @@ bool ws_client_host::accept_socket() {
     return true;
 }
 
-bool ws_client_host::run() {
+bool ws_client_host::run() noexcept {
     try {
         if (tls_client_host::open_socket(server_, link_.local_host)) {
             return false;

@@ -5,7 +5,7 @@
 #include <wss_host.h>
 #include <wss_tunnel.h>
 
-bool wss_tunnel::run() {
+bool wss_tunnel::run() noexcept {
     std::shared_ptr<wss_tunnel> self = shared_from_this();
     try {
         // Make the connection on the IP address we get from a lookup.
@@ -43,20 +43,20 @@ bool wss_tunnel::run() {
 
         // Perform the Async connect.
         remote_socket_.async_connect(io_host::endpoint(link_.remote_host, link_.remote_port),
-            [self, this](const boost::system::error_code& ec) {
+            [self, this](const boost::system::error_code& ec) noexcept {
                 if (ec) {
-                    abort();
+                    close();
                     return;
                 }
                 ack_establish(false);
             });
 
         // Perform the SSL handshake.
-        local_socket_.next_layer().async_handshake(boost::asio::ssl::stream_base::server, [self, this](const boost::system::error_code& ec) {
+        local_socket_.next_layer().async_handshake(boost::asio::ssl::stream_base::server, [self, this](const boost::system::error_code& ec) noexcept {
             typedef boost::beast::http::request<boost::beast::http::dynamic_body> http_request;
 
             if (ec) {
-                abort();
+                close();
                 return;
             }
 
@@ -67,13 +67,13 @@ bool wss_tunnel::run() {
             std::shared_ptr<http_request> req = make_shared_object<http_request>();
 
             // Receive the HTTP response
-            boost::beast::http::async_read(local_socket_.next_layer(), *buffer.get(), *req.get(), [self, this, buffer, req](boost::system::error_code ec, std::size_t sz) {
+            boost::beast::http::async_read(local_socket_.next_layer(), *buffer.get(), *req.get(), [self, this, buffer, req](boost::system::error_code ec, std::size_t sz) noexcept {
                 if (ec == boost::beast::http::error::end_of_stream) {
                     ec = boost::beast::websocket::error::closed;
                 }
 
                 if (ec) {
-                    abort();
+                    close();
                     return;
                 }
 
@@ -85,13 +85,13 @@ bool wss_tunnel::run() {
                 }
 
                 if (ec) {
-                    abort();
+                    close();
                     return;
                 }
 
                 wss_link& link_ = host_->link_;
                 if (!ws_tunnel::check_path(link_.path_, req->target())) {
-                    abort();
+                    close();
                     return;
                 }
                 ack_establish(true);
@@ -104,7 +104,7 @@ bool wss_tunnel::run() {
     }
 }
 
-int wss_tunnel::ack_establish(bool local) {
+int wss_tunnel::ack_establish(bool local) noexcept {
     if (local) {
         local_ok_ = true;
     }
@@ -120,13 +120,13 @@ int wss_tunnel::ack_establish(bool local) {
     return remote_socket_.is_open() ? 1 : -1;
 }
 
-void wss_tunnel::abort() {
+void wss_tunnel::close() noexcept {
     if (!fin_.exchange(true)) {
         std::shared_ptr<wss_tunnel> self = shared_from_this();
         local_socket_.async_close(boost::beast::websocket::close_code::normal,
-            [self, this](const boost::system::error_code& ec_) {
+            [self, this](const boost::system::error_code& ec_) noexcept {
                 local_socket_.next_layer().async_shutdown(
-                    [self, this](const boost::system::error_code& ec_) {
+                    [self, this](const boost::system::error_code& ec_) noexcept {
                         finalize();
                     });
             });
@@ -134,13 +134,13 @@ void wss_tunnel::abort() {
     }
 }
 
-void wss_tunnel::finalize() {
+void wss_tunnel::finalize() noexcept {
     local_socket_buf_.clear();
     tls_client_host::close_socket(remote_socket_);
     tls_client_host::close_socket(local_socket_.next_layer().next_layer());
 }
 
-wss_tunnel::~wss_tunnel() {
+wss_tunnel::~wss_tunnel() noexcept {
     finalize();
 }
 
@@ -177,24 +177,24 @@ wss_tunnel::wss_tunnel(
     local_socket_.binary(true);
 }
 
-bool wss_tunnel::remote_to_local() {
+bool wss_tunnel::remote_to_local() noexcept {
     if (!socket_is_open()) {
         return false;
     }
 
     std::shared_ptr<wss_tunnel> self = shared_from_this();
     remote_socket_.async_receive(boost::asio::buffer(remote_socket_buf_, TCP_BUFFER_SIZE),
-        [self, this](const boost::system::error_code& ec, uint32_t sz) {
+        [self, this](const boost::system::error_code& ec, uint32_t sz) noexcept {
             int by = std::max<int>(-1, ec ? -1 : sz);
             if (by <= 0) {
-                abort();
+                close();
                 return;
             }
 
             local_socket_.async_write(boost::asio::buffer(remote_socket_buf_, by),
-                [self, this](const boost::system::error_code& ec, uint32_t sz) {
+                [self, this](const boost::system::error_code& ec, uint32_t sz) noexcept {
                     if (ec) {
-                        abort();
+                        close();
                         return;
                     }
                     remote_to_local();
@@ -203,26 +203,26 @@ bool wss_tunnel::remote_to_local() {
     return true;
 }
 
-bool wss_tunnel::local_to_remote() {
+bool wss_tunnel::local_to_remote() noexcept {
     if (!socket_is_open()) {
         return false;
     }
 
     std::shared_ptr<wss_tunnel> self = shared_from_this();
     local_socket_.async_read(local_socket_buf_,
-        [self, this](const boost::system::error_code& ec, uint32_t sz) {
+        [self, this](const boost::system::error_code& ec, uint32_t sz) noexcept {
             int by = std::max<int>(-1, ec ? -1 : sz);
             if (by <= 0) {
-                abort();
+                close();
                 return;
             }
 
             boost::asio::mutable_buffer buf_ = std::move(local_socket_buf_.data());
             boost::asio::async_write(remote_socket_, buf_,
-                [self, this](const boost::system::error_code& ec, uint32_t sz) {
+                [self, this](const boost::system::error_code& ec, uint32_t sz) noexcept {
                     local_socket_buf_.clear();
                     if (ec) {
-                        abort();
+                        close();
                         return;
                     }
                     local_to_remote();

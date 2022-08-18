@@ -3,7 +3,7 @@
 #include <wss_client_host.h>
 #include <wss_client_tunnel.h>
 
-bool wss_client_tunnel::run() {
+bool wss_client_tunnel::run() noexcept {
     std::shared_ptr<wss_client_tunnel> self = shared_from_this();
     try {
         // Make the connection on the IP address we get from a lookup.
@@ -42,23 +42,23 @@ bool wss_client_tunnel::run() {
         }
 
         socket_.async_connect(io_host::endpoint(link_.remote_host, link_.remote_port),
-            [self, this](const boost::system::error_code& ec) {
+            [self, this](const boost::system::error_code& ec) noexcept {
                 if (ec) {
-                    abort();
+                    close();
                     return;
                 }
 
                 // Perform the SSL handshake.
-                remote_socket_.next_layer().async_handshake(boost::asio::ssl::stream_base::client, [self, this](const boost::system::error_code& ec) {
+                remote_socket_.next_layer().async_handshake(boost::asio::ssl::stream_base::client, [self, this](const boost::system::error_code& ec) noexcept {
                     if (ec) {
-                        abort();
+                        close();
                         return;
                     }
 
                     wss_client_link& link_ = host_->link_;
-                    remote_socket_.async_handshake(link_.tls_.host_sni, link_.path_, [self, this](const boost::system::error_code& ec) {
+                    remote_socket_.async_handshake(link_.tls_.host_sni, link_.path_, [self, this](const boost::system::error_code& ec) noexcept {
                         if (ec) {
-                            abort();
+                            close();
                             return;
                         }
 
@@ -74,13 +74,13 @@ bool wss_client_tunnel::run() {
     }
 }
 
-void wss_client_tunnel::abort() {
+void wss_client_tunnel::close() noexcept {
     if (!fin_.exchange(true)) {
         std::shared_ptr<wss_client_tunnel> self = shared_from_this();
         remote_socket_.async_close(boost::beast::websocket::close_code::normal,
-            [self, this](const boost::system::error_code& ec_) {
+            [self, this](const boost::system::error_code& ec_) noexcept {
                 remote_socket_.next_layer().async_shutdown(
-                    [self, this](const boost::system::error_code& ec_) {
+                    [self, this](const boost::system::error_code& ec_) noexcept {
                         finalize();
                     });
             });
@@ -88,13 +88,13 @@ void wss_client_tunnel::abort() {
     }
 }
 
-void wss_client_tunnel::finalize() {
+void wss_client_tunnel::finalize() noexcept {
     remote_socket_buf_.clear();
     tls_client_host::close_socket(*local_socket_.get());
     tls_client_host::close_socket(remote_socket_.next_layer().next_layer());
 }
 
-wss_client_tunnel::~wss_client_tunnel() {
+wss_client_tunnel::~wss_client_tunnel() noexcept {
     finalize();
 }
 
@@ -129,26 +129,26 @@ wss_client_tunnel::wss_client_tunnel(
     remote_socket_.binary(true);
 }
 
-bool wss_client_tunnel::remote_to_local() {
+bool wss_client_tunnel::remote_to_local() noexcept {
     if (!socket_is_open()) {
         return false;
     }
 
     std::shared_ptr<wss_client_tunnel> self = shared_from_this();
     remote_socket_.async_read(remote_socket_buf_,
-        [self, this](const boost::system::error_code& ec, uint32_t sz) {
+        [self, this](const boost::system::error_code& ec, uint32_t sz) noexcept {
             int by = std::max<int>(-1, ec ? -1 : sz);
             if (by <= 0) {
-                abort();
+                close();
                 return;
             }
 
             boost::asio::mutable_buffer buf_ = std::move(remote_socket_buf_.data());
             boost::asio::async_write(*local_socket_.get(), buf_,
-                [self, this](const boost::system::error_code& ec, uint32_t sz) {
+                [self, this](const boost::system::error_code& ec, uint32_t sz) noexcept {
                     remote_socket_buf_.clear();
                     if (ec) {
-                        abort();
+                        close();
                         return;
                     }
                     remote_to_local();
@@ -157,24 +157,24 @@ bool wss_client_tunnel::remote_to_local() {
     return true;
 }
 
-bool wss_client_tunnel::local_to_remote() {
+bool wss_client_tunnel::local_to_remote() noexcept {
     if (!socket_is_open()) {
         return false;
     }
 
     std::shared_ptr<wss_client_tunnel> self = shared_from_this();
     local_socket_->async_receive(boost::asio::buffer(local_socket_buf_, TCP_BUFFER_SIZE),
-        [self, this](const boost::system::error_code& ec, uint32_t sz) {
+        [self, this](const boost::system::error_code& ec, uint32_t sz) noexcept {
             int by = std::max<int>(-1, ec ? -1 : sz);
             if (by <= 0) {
-                abort();
+                close();
                 return;
             }
 
             remote_socket_.async_write(boost::asio::buffer(local_socket_buf_, by),
-                [self, this](const boost::system::error_code& ec, uint32_t sz) {
+                [self, this](const boost::system::error_code& ec, uint32_t sz) noexcept {
                     if (ec) {
-                        abort();
+                        close();
                         return;
                     }
                     local_to_remote();
